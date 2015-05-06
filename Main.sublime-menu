@@ -4,7 +4,7 @@
     "children":
     [
         {"id": "timed write"},
-        {"command": "word_count"}
+        {"command": "word_count", "caption":"Count Words"}
     ]
 }
 ]
