@@ -1,8 +1,11 @@
 import sublime, sublime_plugin
+from datetime import timedelta
 from datetime import datetime
 
 _start_time = None
 _start_count = None
+_last_selection_update = None
+_last_word_count_update = None
 
 class WordCountUtil(object):
 	@staticmethod
@@ -64,8 +67,15 @@ class StopWordCountCommand(sublime_plugin.TextCommand):
 
 	def run(self, edit):
 		global _start_time
+		global _start_count
+		global _last_selection_update
+		global _last_word_count_update
 		_start_time = None
 		WordCountUtil.clear_status(self.view)
+		_start_count = None
+		_last_selection_update = None
+		_last_word_count_update = None
+
 
 class WordCountCommand(sublime_plugin.TextCommand):
 	def is_visible(self):
@@ -80,6 +90,9 @@ class WordCountCommand(sublime_plugin.TextCommand):
 		# add in selection count
 
 class WordCountEvents(sublime_plugin.EventListener):
+	def __init__(self):
+		self._update_interval = 1
+
 	@staticmethod
 	def _count_words(string):
 		return sum(1 for word in string.split() if any(c.isalpha() for c in word) and len(word) > 2)
@@ -89,7 +102,19 @@ class WordCountEvents(sublime_plugin.EventListener):
 		return WordCountEvents._count_words(view.substr(region))
 
 	def on_selection_modified(self, view):
+		global _last_selection_update
+		if _last_selection_update and \
+				(datetime.utcnow() - _last_selection_update).seconds < self._update_interval:
+			return
+
 		WordCountUtil.update_selection_data(view)
+		_last_selection_update = datetime.utcnow()
 
 	def on_modified(self, view):
+		global _last_word_count_update
+		if _last_word_count_update and \
+				(datetime.utcnow() - _last_word_count_update).seconds < self._update_interval:
+			return
+
 		WordCountUtil.update_word_counts(view)
+		_last_word_count_update = datetime.utcnow()
